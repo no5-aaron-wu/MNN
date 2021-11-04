@@ -29,6 +29,9 @@ list(APPEND MNN_EXEC_DEMOS rasterDemo.out)
 add_executable(nluDemo.out ${CMAKE_CURRENT_LIST_DIR}/nluDemo.cpp)
 list(APPEND MNN_EXEC_DEMOS nluDemo.out)
 
+add_executable(roiAlignDemo.out ${CMAKE_CURRENT_LIST_DIR}/roiAlignDemo.cpp)
+list(APPEND MNN_EXEC_DEMOS roiAlignDemo.out)
+
 foreach(TARGET ${MNN_EXEC_DEMOS})
     target_link_libraries(${TARGET} ${MNN_DEPS})
     if (MSVC)
