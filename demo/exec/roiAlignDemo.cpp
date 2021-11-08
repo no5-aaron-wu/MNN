@@ -1,8 +1,9 @@
-#include <MNN/Interpreter.hpp>
 #include <MNN/MNNDefine.h>
+#include <math.h>
+#include <MNN/Interpreter.hpp>
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <algorithm>
 #if defined(_MSC_VER)
 #include <Windows.h>
 #undef min
