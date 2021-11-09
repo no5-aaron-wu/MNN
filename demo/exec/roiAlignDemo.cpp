@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
         getRandomData(inputData.data(), batchSize * channel * inputH * inputW, lb, hb, seed);
         getRandomData(roiData.data(), roiNum * roiLen, lb, hb, seed);
         for (int i = 0; i < roiNum; ++i) {
-            roiData.data()[5 * i] = floorf(roiData.data()[roiLen * i] / (hb - lb) * batchSize);
+            roiData.data()[5 * i] = floorf(roiData.data()[roiLen * i] / (hb - lb + 1) * batchSize);
         }
         MNN::Tensor* featsHostTensor =
             MNN::Tensor::create<float>(feats->shape(), (void*)inputData.data(), MNN::Tensor::CAFFE);
@@ -223,6 +223,7 @@ int main(int argc, char* argv[]) {
 
             int t = loopCnt;
             std::map<std::string, std::pair<float, float>> opTimes;
+            std::map<std::string, std::pair<float, float>> opMaxMinTimes;
             std::map<std::string, std::string> opTypes;
             uint64_t opBegin = 0;
 
@@ -234,6 +235,7 @@ int main(int argc, char* argv[]) {
                 opBegin = getTimeInUs();
                 if (opTimes.find(info->name()) == opTimes.end()) {
                     opTimes.insert(std::make_pair(info->name(), std::make_pair(0.0f, info->flops())));
+                    opMaxMinTimes.insert(std::make_pair(info->name(), std::make_pair(0.0f, MAXFLOAT)));
                 }
                 return true;
             };
@@ -243,6 +245,12 @@ int main(int argc, char* argv[]) {
                 float cost = (float)(opEnd - opBegin) / 1000.0f;
 
                 opTimes[info->name()].first += cost;
+                if (cost > opMaxMinTimes[info->name()].first) {
+                    opMaxMinTimes[info->name()].first = cost;
+                }
+                if (cost < opMaxMinTimes[info->name()].second) {
+                    opMaxMinTimes[info->name()].second = cost;
+                }
                 return true;
             };
 
@@ -274,10 +282,13 @@ int main(int argc, char* argv[]) {
 
                 std::sort(allOpsTimes.begin(), allOpsTimes.end());
                 for (auto& iter : allOpsTimes) {
-                    MNN_PRINT("%*s \t[%s] run %d average cost %f ms, %.3f %%, FlopsRate: %.3f %%\n", 4,
-                              iter.second.first.c_str(), opTypes[iter.second.first].c_str(), loopCnt,
-                              iter.first / (float)loopCnt, iter.first / sum * 100.0f,
-                              iter.second.second / sumFlops * 100.0f);
+                    MNN_PRINT(
+                        "%*s \t[%s] run %d average cost %.4f ms, max cost %.4f ms, min cost %.4f ms, %.3f %%, FlopsRate: "
+                        "%.3f %%\n",
+                        4, iter.second.first.c_str(), opTypes[iter.second.first].c_str(), loopCnt,
+                        iter.first / (float)loopCnt, opMaxMinTimes[iter.second.first.c_str()].first,
+                        opMaxMinTimes[iter.second.first.c_str()].second, iter.first / sum * 100.0f,
+                        iter.second.second / sumFlops * 100.0f);
                 }
                 MNN_PRINT("Avg= %f ms, min= %f ms, max= %f ms\n", sum / (float)t, *minTime, *maxTime);
             }
